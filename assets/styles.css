@@ -237,6 +237,32 @@ dialog.modal::backdrop { background: rgba(5, 19, 26, .45); }
 .modal-body { padding: 20px; overflow: auto; }
 .modal-body .kv { gap: 18px; }
 
+/* ---------- about ---------- */
+.lead { font-size: 15px; line-height: 1.6; max-width: 820px; margin-bottom: 20px; }
+.variants { margin-bottom: 20px; }
+.variant { border-radius: 14px; background: var(--bg-soft); padding: 16px 18px; display: grid; gap: 4px; }
+.variant h3 { font-size: 15px; }
+.bullets { display: grid; gap: 6px; }
+.bullets li { padding-left: 16px; position: relative; }
+.bullets li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.desktop-only { display: none; }
+
+/* ---------- unit economics ---------- */
+.eco-source { margin-bottom: 18px; max-width: 820px; }
+.eco-table { display: none; }
+.eco-table .table td { font-weight: 400; }
+.eco-table .table td:first-child { font-weight: 600; }
+.eco-table .row-total td { background: var(--bg-soft); }
+.eco-list { border: 1px solid var(--line); border-radius: 14px; padding: 4px 16px; }
+.eco-list .kv-line { align-items: center; }
+.eco-list .kv-line .k { flex: 1; }
+.kv-line--total { background: var(--bg-soft); margin: 0 -16px; padding: 10px 16px; }
+
+/* ---------- memo modal ---------- */
+.modal-body--frame { padding: 0; flex: 1; min-height: 0; }
+.memo-frame { display: block; width: 100%; height: 100%; border: 0; }
+
 /* ---------- footer ---------- */
 .site-footer { border-top: 1px solid var(--line); padding: 24px 0 40px; color: var(--muted); }
 
@@ -269,6 +295,12 @@ dialog.modal::backdrop { background: rgba(5, 19, 26, .45); }
   }
   .modal-head { padding: 24px 28px 16px; }
   .modal-body { padding: 24px 28px 28px; }
+  dialog.modal--wide { max-width: 960px; height: calc(100vh - 64px); }
+  dialog.modal--wide .modal-body--frame { padding: 0; }
+
+  .desktop-only { display: inline-flex; }
+  .eco-table { display: block; }
+  .eco-tabs { display: none; }
 }
 
 /* ---------- mobile: tables as cards ---------- */

@@ -6,7 +6,7 @@
   var ICON = {
     chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>',
+    open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>',
     back: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>'
   };
 
@@ -90,10 +90,12 @@
   /* ---------- launch page ---------- */
   var SECTIONS = [
     { id: "roles", label: "Роли" },
+    { id: "about", label: "О продукте" },
     { id: "products", label: "Продукты" },
     { id: "prep", label: "Подготовка" },
     { id: "flow", label: "Флоу" },
     { id: "guarantees", label: "Гарантии" },
+    { id: "economics", label: "Юнит-экономика" },
     { id: "contacts", label: "Контакты" },
     { id: "questions", label: "Вопросы" }
   ];
@@ -145,6 +147,19 @@
       }).join("") +
       "</div></div></section>";
 
+    // about
+    var about = l.about || {};
+    html +=
+      '<section class="section" id="about"><div class="container"><div class="section-head"><h2>О продукте</h2></div>' +
+      '<p class="lead">' + t(about.short, "коротко о продукте") + "</p>" +
+      '<div class="grid grid-3 variants">' +
+      (about.variants || []).map(function (v) {
+        return '<div class="variant"><h3>' + t(v.name, "вариант") + "</h3><p>" + t(v.text, "описание") + "</p></div>";
+      }).join("") +
+      "</div>" +
+      '<button class="btn btn--secondary" type="button" data-modal="about-modal">Подробнее</button>' +
+      "</div></section>";
+
     // products
     var products = l.products || [];
     html +=
@@ -172,7 +187,10 @@
       "</div>" +
       prep.map(function (p, i) {
         var memo = p.memo
-          ? '<a class="btn btn--primary" href="' + esc(p.memo) + '" download>' + ICON.download + "Скачать памятку</a>"
+          ? '<div class="btn-row">' +
+            '<a class="btn btn--primary" href="../assets/' + esc(p.memo) + '" target="_blank" rel="noopener">' + ICON.open + "Открыть памятку</a>" +
+            '<button class="btn btn--secondary desktop-only" type="button" data-memo="../assets/' + esc(p.memo) + '" data-memo-title="Памятка: ' + esc(p.label) + '">Показать здесь</button>' +
+            "</div>"
           : '<div>' + t(p.memoTodo, "памятка PDF") + "</div>";
         return (
           '<div class="tabpanel" role="tabpanel" id="panel-' + esc(p.id) + '" aria-labelledby="tab-' + esc(p.id) + '"' + (i === 0 ? "" : " hidden") + ">" +
@@ -221,6 +239,61 @@
       }).join("") +
       "</ul></div></section>";
 
+    // unit economics
+    var eco = l.economics || {};
+    var cols = eco.columns || [];
+    var price = eco.price || { label: "Цена для клиента", values: [] };
+    var costs = eco.costs || [];
+    function num(v) { return typeof v === "number" && isFinite(v) ? v : null; }
+    function money(v) { return num(v) === null ? t(v, "сумма") : num(v).toLocaleString("ru-RU") + " ₽"; }
+    var margins = cols.map(function (_, c) {
+      var pr = num(price.values[c]);
+      if (pr === null) return null;
+      var sum = 0;
+      for (var i = 0; i < costs.length; i++) {
+        var x = num(costs[i].values[c]);
+        if (x === null) return null;
+        sum += x;
+      }
+      return { rub: pr - sum, pct: pr ? Math.round(((pr - sum) / pr) * 1000) / 10 : null };
+    });
+    var noData = '<span class="muted">нет данных</span>';
+    var ecoRows = [{ label: price.label, values: price.values }].concat(costs).map(function (r) {
+      return { label: t(r.label), cells: cols.map(function (_, c) { return money(r.values[c]); }) };
+    });
+    ecoRows.push({ label: "<strong>Маржа Bioniq, ₽</strong>", cells: margins.map(function (m) { return m ? "<strong>" + m.rub.toLocaleString("ru-RU") + " ₽</strong>" : noData; }), total: true });
+    ecoRows.push({ label: "<strong>Маржа Bioniq, %</strong>", cells: margins.map(function (m) { return m && m.pct !== null ? "<strong>" + String(m.pct).replace(".", ",") + " %</strong>" : noData; }), total: true });
+
+    html +=
+      '<section class="section" id="economics"><div class="container"><div class="section-head"><h2>Юнит-экономика</h2></div>' +
+      '<p class="muted eco-source">' + t(eco.source, "источник") + "</p>" +
+      // desktop: table
+      '<div class="table-wrap eco-table"><table class="table"><thead><tr><th>На одну единицу</th>' +
+      cols.map(function (c) { return "<th>" + t(c) + "</th>"; }).join("") +
+      "</tr></thead><tbody>" +
+      ecoRows.map(function (r) {
+        return '<tr class="' + (r.total ? "row-total" : "") + '"><td>' + r.label + "</td>" + r.cells.map(function (c) { return "<td>" + c + "</td>"; }).join("") + "</tr>";
+      }).join("") +
+      "</tbody></table></div>" +
+      // mobile: tabs by product
+      '<div class="eco-tabs">' +
+      '<div class="tabs" role="tablist" aria-label="Продукт">' +
+      cols.map(function (c, i) {
+        return '<button class="tab" type="button" role="tab" id="eco-tab-' + i + '" aria-selected="' + (i === 0) + '" aria-controls="eco-panel-' + i + '" tabindex="' + (i === 0 ? 0 : -1) + '">' + t(c) + "</button>";
+      }).join("") +
+      "</div>" +
+      cols.map(function (c, i) {
+        return (
+          '<div class="tabpanel eco-list" role="tabpanel" id="eco-panel-' + i + '" aria-labelledby="eco-tab-' + i + '"' + (i === 0 ? "" : " hidden") + ">" +
+          ecoRows.map(function (r) {
+            return '<div class="kv-line' + (r.total ? " kv-line--total" : "") + '"><span class="k">' + r.label + '</span><span class="v">' + r.cells[i] + "</span></div>";
+          }).join("") +
+          "</div>"
+        );
+      }).join("") +
+      "</div>" +
+      "</div></section>";
+
     // contacts
     html +=
       '<section class="section" id="contacts"><div class="container"><div class="section-head"><h2>Контакты</h2></div>' +
@@ -253,6 +326,32 @@
       "</div></section>";
 
     // modals
+    var det = about.details || {};
+    function bullets(arr, hint) {
+      if (!arr || !arr.length) return t(null, hint);
+      return '<ul class="bullets">' + arr.map(function (x) { return "<li>" + t(x) + "</li>"; }).join("") + "</ul>";
+    }
+    html +=
+      '<dialog class="modal" id="about-modal" aria-labelledby="about-modal-title">' +
+      '<div class="modal-inner"><div class="modal-head"><h3 id="about-modal-title">О продукте</h3>' +
+      '<button class="modal-close" type="button" aria-label="Закрыть">' + ICON.close + "</button></div>" +
+      '<div class="modal-body">' +
+      kv([
+        { label: "Метод", value: t(det.method, "метод") },
+        { label: "Кровь", value: t(det.blood, "состав по крови") },
+        { label: "Моча", value: t(det.urine, "состав по моче") },
+        { label: "Что дает", value: bullets(det.gives, "что дает") },
+        { label: "Чего не делает", value: bullets(det.notGives, "чего не делает") }
+      ], true) +
+      "</div></div></dialog>";
+
+    html +=
+      '<dialog class="modal modal--wide" id="memo-modal" aria-labelledby="memo-modal-title">' +
+      '<div class="modal-inner"><div class="modal-head"><h3 id="memo-modal-title">Памятка</h3>' +
+      '<button class="modal-close" type="button" aria-label="Закрыть">' + ICON.close + "</button></div>" +
+      '<div class="modal-body modal-body--frame"><iframe class="memo-frame" title="Памятка" src="about:blank"></iframe></div>' +
+      "</div></dialog>";
+
     html += products.map(function (p, i) {
       var c = p.composition || {};
       return (
@@ -334,8 +433,9 @@
   }
 
   function initTabs() {
-    var list = document.querySelector('[role="tablist"]');
-    if (!list) return;
+    Array.prototype.forEach.call(document.querySelectorAll('[role="tablist"]'), initTablist);
+  }
+  function initTablist(list) {
     var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
     function select(tab) {
       tabs.forEach(function (x) {
@@ -392,13 +492,28 @@
         }
         return;
       }
+      var memoBtn = e.target.closest("[data-memo]");
+      if (memoBtn) {
+        var memo = document.getElementById("memo-modal");
+        if (memo && typeof memo.showModal === "function") {
+          lastTrigger = memoBtn;
+          memo.querySelector("#memo-modal-title").textContent = memoBtn.getAttribute("data-memo-title") || "Памятка";
+          memo.querySelector(".memo-frame").src = memoBtn.getAttribute("data-memo");
+          memo.showModal();
+          memo.querySelector(".modal-close").focus();
+        }
+        return;
+      }
       var closeBtn = e.target.closest(".modal-close");
       if (closeBtn) { closeBtn.closest("dialog").close(); return; }
       // click on the backdrop: the target is the dialog itself, not its content
       if (e.target.tagName === "DIALOG" && e.target.open) e.target.close();
     });
     document.addEventListener("close", function (e) {
-      if (e.target.tagName === "DIALOG" && lastTrigger) { lastTrigger.focus(); lastTrigger = null; }
+      if (e.target.tagName !== "DIALOG") return;
+      var frame = e.target.querySelector(".memo-frame");
+      if (frame) frame.src = "about:blank";
+      if (lastTrigger) { lastTrigger.focus(); lastTrigger = null; }
     }, true);
   }
 
