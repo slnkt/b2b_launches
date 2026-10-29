@@ -89,8 +89,8 @@
 
   /* ---------- launch page ---------- */
   var SECTIONS = [
-    { id: "roles", label: "Роли" },
     { id: "about", label: "О продукте" },
+    { id: "roles", label: "Роли" },
     { id: "products", label: "Продукты" },
     { id: "prep", label: "Подготовка" },
     { id: "flow", label: "Флоу" },
@@ -138,15 +138,6 @@
       '<div class="hero-meta">' + badge(l.status) + "<span>Обновлено " + fmtDate(l.updated) + "</span></div>" +
       "</div></section>";
 
-    // roles
-    html +=
-      '<section class="section" id="roles"><div class="container"><div class="section-head"><h2>Роли</h2></div>' +
-      '<div class="grid grid-3">' +
-      (l.roles || []).map(function (r) {
-        return '<article class="card"><h3>' + t(r.party, "участник") + "</h3><p>" + t(r.role, "роль") + "</p></article>";
-      }).join("") +
-      "</div></div></section>";
-
     // about
     var about = l.about || {};
     html +=
@@ -159,6 +150,15 @@
       "</div>" +
       '<button class="btn btn--secondary" type="button" data-modal="about-modal">Подробнее</button>' +
       "</div></section>";
+
+    // roles
+    html +=
+      '<section class="section" id="roles"><div class="container"><div class="section-head"><h2>Роли</h2></div>' +
+      '<div class="grid grid-3">' +
+      (l.roles || []).map(function (r) {
+        return '<article class="card"><h3>' + t(r.party, "участник") + "</h3><p>" + t(r.role, "роль") + "</p></article>";
+      }).join("") +
+      "</div></div></section>";
 
     // products
     var products = l.products || [];
@@ -201,26 +201,10 @@
       }).join("") +
       "</div></section>";
 
-    // flow
-    var flow = l.flow || [];
+    // flow: clickable prototype (assets/proto.js)
     html +=
       '<section class="section" id="flow"><div class="container"><div class="section-head"><h2>Клиентский флоу</h2></div>' +
-      '<ol class="acc">' +
-      flow.map(function (s, i) {
-        return accItem({
-          id: "flow-" + i,
-          num: i + 1,
-          title: t(s.title, "шаг"),
-          body: kv([
-            { label: "Что делает клиент", value: t(s.client, "что делает клиент") },
-            { label: "Кто отвечает", value: t(s.owner, "кто отвечает") }
-          ])
-        });
-      }).join("") +
-      "</ol>" +
-      '<ul class="acc" style="margin-top:16px">' +
-      accItem({ id: "statuses", title: "Статусы заказа в ЛК", body: '<div class="kv-value">' + t(l.orderStatuses, "статусы заказа") + "</div>" }) +
-      "</ul>" +
+      '<div id="flow-proto"></div>' +
       "</div></section>";
 
     // guarantees
@@ -370,6 +354,7 @@
     }).join("");
 
     root.innerHTML = html;
+    if (window.renderFlowProto) window.renderFlowProto(document.getElementById("flow-proto"), l.flow || {}, { t: t, esc: esc, kv: kv });
     initSubnav();
     initTabs();
     initQuestions();
