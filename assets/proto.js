@@ -1,12 +1,14 @@
 /* Кликабельный прототип клиентского флоу в рамке телефона.
+   Компоненты экранов повторяют существующие прототипы Bioniq (прототип для Яндекс консьержа).
    Без реальных данных и отправки: кнопки только переключают экраны. */
 (function () {
   "use strict";
 
   var ICON = {
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.5"/></svg>',
     ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>',
-    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>',
     chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
     status: '<span class="ph-status-ic">' +
       '<svg viewBox="0 0 18 12" fill="currentColor" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>' +
@@ -14,6 +16,8 @@
       '<svg viewBox="0 0 26 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1" y="1" width="21" height="10" rx="3"/><rect x="3" y="3" width="15" height="6" rx="1.5" fill="currentColor" stroke="none"/><path d="M24 4.5v3" stroke-linecap="round"/></svg>' +
       "</span>"
   };
+  var MONTHS = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+  var WEEKDAYS = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
 
   window.renderFlowProto = function (root, flow, h) {
     if (!root) return;
@@ -23,57 +27,61 @@
     var co = flow.checkout || {}, auth = flow.auth || {}, qn = flow.questionnaire || {}, bk = flow.booking || {};
     var products = co.products || ["Кровь"];
     var qBlocks = qn.blocks || [];
+    var slots = bk.slots || [];
 
     var state = {
       step: 0, product: 0,
       promo: co.promo || "", promoApplied: false, consents: [false, false],
       qPage: 0,
-      method: 0, date: 0, slot: 0, sent: false,
+      date: 0, slot: 0, sent: false,
       status: 0,
       descOpen: false
     };
 
-    function dates() {
+    var DATES = (function () {
       var out = [], now = new Date();
       for (var i = 1; i <= 3; i++) {
         var d = new Date(now.getTime() + i * 86400000);
-        out.push(d.toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" }).replace(".", ""));
+        out.push({ wd: WEEKDAYS[d.getDay()], day: d.getDate(), mon: MONTHS[d.getMonth()], full: d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear() });
       }
       return out;
-    }
-    var DATES = dates();
+    })();
 
-    function chips(items, active, act, extra) {
-      return '<div class="ph-chips">' + items.map(function (x, i) {
-        return '<button type="button" class="ph-chip' + (i === active ? " on" : "") + '" data-act="' + act + '" data-i="' + i + '"' + (extra || "") + ">" + esc(x) + "</button>";
-      }).join("") + "</div>";
-    }
-    function seg(items, active, act) {
-      return '<div class="ph-seg">' + items.map(function (x, i) {
-        return '<button type="button" class="' + (i === active ? "on" : "") + '" data-act="' + act + '" data-i="' + i + '">' + esc(x) + "</button>";
-      }).join("") + "</div>";
-    }
+    /* ---------- shared parts ---------- */
     function statusbar() { return '<div class="ph-status"><span>9:41</span>' + ICON.status + "</div>"; }
+    function tophead() { return '<div class="ph-tophead"><div class="ph-av">НС</div></div>'; }
     function productName() { return "МетабоСкан: " + products[state.product]; }
+    function prepCard() {
+      return '<div class="ph-rec"><div class="ph-rec-title">Как подготовиться</div><ol class="ph-rec-list">' +
+        (bk.prep || []).map(function (x) { return "<li>" + t(x) + "</li>"; }).join("") + "</ol>" +
+        (bk.memo ? '<a class="ph-pilllink" href="../assets/' + esc(bk.memo) + '" target="_blank" rel="noopener">' + ICON.ext + "Открыть памятку</a>" : "") +
+        "</div>";
+    }
 
     /* ---------- screens ---------- */
     function screenCheckout() {
       var ready = state.promoApplied && state.consents[0] && state.consents[1];
+      var priceHtml = t(co.price, "цена");
       var consents = (co.consents || []).map(function (c, i) {
-        return '<label class="ph-check"><input type="checkbox" data-act="consent" data-i="' + i + '"' + (state.consents[i] ? " checked" : "") + "><span>" + t(c.label) + "<br>" + t(c.text, "текст согласия") + "</span></label>";
+        return '<label class="ph-check"><input type="checkbox" data-act="consent" data-i="' + i + '"' + (state.consents[i] ? " checked" : "") + '><span class="ph-cb"></span><span>' + t(c.label) + "<br>" + t(c.text, "текст согласия") + "</span></label>";
       }).join("");
       return (
+        tophead() +
         '<div class="ph-body">' +
-        '<div class="ph-h1">Оформление заказа</div>' +
-        seg(products, state.product, "product") +
-        '<div class="ph-order"><div><b>' + esc(productName()) + "</b><span>Результаты в ЛК и PDF на почту</span></div>" +
-        '<div class="ph-price">' + (state.promoApplied ? "<s>" + t(co.price, "цена") + "</s>0 ₽" : t(co.price, "цена")) + "</div></div>" +
-        (state.promoApplied ? '<div><span class="ph-applied">' + ICON.check + "Промокод Encore применен</span></div>" : "") +
-        '<div class="ph-field"><label class="ph-label" for="ph-promo">Промокод</label>' +
-        '<div class="ph-promo"><input class="ph-input" id="ph-promo" value="' + esc(state.promo) + '" placeholder="Введите промокод"' + (state.promoApplied ? " disabled" : "") + ">" +
-        '<button type="button" class="ph-btn-sm" data-act="promo"' + (state.promoApplied ? " disabled" : "") + ">" + (state.promoApplied ? "Применен" : "Активировать") + "</button></div></div>" +
+        '<h2 class="ph-h2s">Оформление заказа</h2>' +
+        '<div class="ph-seg">' + products.map(function (x, i) {
+          return '<button type="button" class="' + (i === state.product ? "on" : "") + '" data-act="product" data-i="' + i + '">' + esc(x) + "</button>";
+        }).join("") + "</div>" +
+        '<div class="ph-order-item"><b>' + esc(productName()) + '</b><span class="ph-pr">' + priceHtml + "</span></div>" +
+        '<div class="ph-sect-h">Промокод</div>' +
+        '<div class="ph-promo' + (state.promoApplied ? " ok" : "") + '"><input class="ph-promo-in" id="ph-promo" value="' + esc(state.promo) + '" placeholder="Введите промокод"' + (state.promoApplied ? " disabled" : "") + ">" +
+        '<button type="button" class="ph-ap" data-act="promo"' + (state.promoApplied ? " disabled" : "") + ">" + (state.promoApplied ? "Применен" : "Активировать") + "</button></div>" +
+        (state.promoApplied ? '<div><span class="ph-chip-ok">' + ICON.check + "Промокод Encore применен</span></div>" : "") +
+        '<div class="ph-order-list"><div class="ph-ol">' + esc(productName()) + '</div><div class="ph-ol">Выезд медсестры на дом</div>' +
+        (state.promoApplied ? '<div class="ph-ol">Промокод Encore: <s>' + priceHtml + "</s></div>" : "") + "</div>" +
+        '<div class="ph-order-total"><span class="l">Итого</span><span class="v">' + (state.promoApplied ? "0 ₽" : priceHtml) + "</span></div>" +
         '<div class="ph-consents">' + consents + "</div>" +
-        '<div class="ph-bottom"><button type="button" class="ph-btn' + (ready ? "" : " ph-btn--dis") + '" data-act="next"' + (ready ? "" : " aria-disabled=\"true\"") + ">Продолжить</button>" +
+        '<div class="ph-bottom"><button type="button" class="ph-btn' + (ready ? "" : " dis") + '" data-act="next"' + (ready ? "" : ' aria-disabled="true"') + ">Продолжить</button>" +
         '<div class="ph-hint">' + (ready ? "" : "Активируйте промокод и отметьте согласия") + "</div></div>" +
         "</div>"
       );
@@ -81,14 +89,14 @@
 
     function screenAuth() {
       return (
-        '<div class="ph-body ph-center">' +
-        '<img class="ph-logo" src="../assets/bioniq-wordmark.svg" alt="Bioniq">' +
-        '<div class="ph-h1">Вход в личный кабинет</div>' +
-        '<div class="ph-sub">' + t(auth.method, "способ входа") + "</div>" +
-        '<div class="ph-field ph-field--full"><label class="ph-label" for="ph-phone">Телефон</label><input class="ph-input" id="ph-phone" placeholder="+7"></div>' +
-        '<div class="ph-bottom ph-bottom--tight"><button type="button" class="ph-btn" data-act="next">Войти</button>' +
-        '<button type="button" class="ph-link" data-act="next">Зарегистрироваться</button></div>' +
-        "</div>"
+        '<div class="ph-auth">' +
+        '<div class="ph-auth-modal">' +
+        '<div class="ph-auth-head"><h3>Войти или зарегистрироваться</h3><span class="ph-auth-x" aria-hidden="true">✕</span></div>' +
+        '<p class="ph-auth-sub">' + t(auth.method, "способ входа") + "</p>" +
+        '<label class="ph-fld"><span class="lb">Ваш email или номер телефона</span><input class="ph-fld-in" placeholder="+7"></label>' +
+        '<button type="button" class="ph-btn" data-act="next">Войти</button>' +
+        '<button type="button" class="ph-btn dark" data-act="next">Зарегистрироваться</button>' +
+        "</div></div>"
       );
     }
 
@@ -97,83 +105,103 @@
       var pct = Math.round(((page + 1) / n) * 100);
       var fields = (b.fields || []).map(function (f, i) {
         var id = "ph-q-" + page + "-" + i;
-        var ctrl = f.type === "choice"
-          ? chips(f.options || [], -1, "choice", ' data-group="' + id + '"')
-          : '<input class="ph-input" id="' + id + '" placeholder="' + esc(f.placeholder || "") + '">';
-        return '<div class="ph-field"><label class="ph-label"' + (f.type === "choice" ? "" : ' for="' + id + '"') + ">" + t(f.label) + "</label>" + ctrl + "</div>";
+        if (f.type === "choice") {
+          return '<div class="ph-cap-h">' + t(f.label) + "</div>" + (f.options || []).map(function (o, j) {
+            return '<button type="button" class="ph-fmt-row" data-act="choice" data-group="' + id + '">' + esc(o) + '<span class="radio"></span></button>';
+          }).join("");
+        }
+        return '<label class="ph-fld"><span class="lb">' + t(f.label) + '</span><input class="ph-fld-in" id="' + id + '" placeholder="' + esc(f.placeholder || "") + '"></label>';
       }).join("");
       return (
+        tophead() +
         '<div class="ph-body">' +
         '<div class="ph-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="ph-sub">Анкета, блок ' + (page + 1) + " из " + n + "</div>" +
-        '<div class="ph-h1">' + t(b.title, "блок") + "</div>" +
-        (page === 0 && qn.note ? '<div class="ph-sub">' + t(qn.note) + "</div>" : "") +
+        '<h2 class="ph-h2s">' + t(b.title, "блок") + "</h2>" +
+        '<p class="ph-sub">Анкета, блок ' + (page + 1) + " из " + n + (page === 0 && qn.note ? ". " + t(qn.note) : "") + "</p>" +
         fields +
         '<div class="ph-bottom"><button type="button" class="ph-btn" data-act="' + (page + 1 < n ? "qnext" : "next") + '">' + (page + 1 < n ? "Далее" : "Готово") + "</button>" +
-        (page > 0 ? '<button type="button" class="ph-link" data-act="qback">Назад</button>' : "") +
+        (page > 0 ? '<div class="ph-hint"><button type="button" class="ph-link" data-act="qback">Назад</button></div>' : "") +
         "</div></div>"
       );
     }
 
     function screenBooking() {
-      var methods = bk.methods || ["В Encore", "Медсестра на дом"];
       if (state.sent) {
         return (
-          '<div class="ph-body ph-center">' +
-          '<div class="ph-done">' + ICON.check + "</div>" +
-          '<div class="ph-h1">Заявка отправлена</div>' +
-          '<div class="ph-sub">' + esc(methods[state.method]) + ", " + esc(DATES[state.date]) + " в " + esc((bk.slots || [])[state.slot] || "") + "<br>Подтвердим и напишем вам.</div>" +
-          '<div class="ph-bottom ph-bottom--tight"><button type="button" class="ph-btn" data-act="next">В личный кабинет</button></div>' +
+          statusbarless() +
+          '<div class="ph-thanks">' +
+          '<div class="ph-ok-ring">' + ICON.check + "</div>" +
+          "<h2>Заявка отправлена</h2>" +
+          "<p>Медсестра приедет " + esc(DATES[state.date].full) + " в " + esc(slots[state.slot] || "") + ". Менеджер подтвердит запись и напишет вам.</p>" +
+          '<button type="button" class="ph-btn" data-act="next">В личный кабинет</button>' +
           "</div>"
         );
       }
       return (
+        tophead() +
         '<div class="ph-body">' +
-        '<div class="ph-h1">Запись на сдачу</div>' +
-        '<div class="ph-field"><span class="ph-label">Где сдать</span>' + seg(methods, state.method, "method") + "</div>" +
-        (state.method === 1 ? '<div class="ph-field"><label class="ph-label" for="ph-addr">Адрес</label><input class="ph-input" id="ph-addr" placeholder="Город, улица, дом, квартира"></div>' : "") +
-        '<div class="ph-field"><span class="ph-label">Дата</span>' + chips(DATES, state.date, "date") + "</div>" +
-        '<div class="ph-field"><span class="ph-label">Время, слоты 8:00–10:00</span>' + chips(bk.slots || [], state.slot, "slot") + "</div>" +
-        '<div class="ph-block"><b>Как подготовиться</b><ul>' + (bk.prep || []).map(function (x) { return "<li>" + t(x) + "</li>"; }).join("") + "</ul>" +
-        (bk.memo ? '<a class="ph-ext" href="../assets/' + esc(bk.memo) + '" target="_blank" rel="noopener">' + ICON.ext + "Открыть памятку</a>" : "") + "</div>" +
+        '<h2 class="ph-h2s">Заявка на сдачу крови</h2>' +
+        '<p class="ph-sub">Медсестра приедет к вам домой. Менеджер свяжется после отправки заявки</p>' +
+        '<label class="ph-fld"><span class="lb">Адрес</span><input class="ph-fld-in" id="ph-addr" placeholder="Город, улица, дом, квартира"></label>' +
+        '<div class="ph-cap-h">Дата</div>' +
+        '<div class="ph-date-chips">' + DATES.map(function (d, i) {
+          return '<button type="button" class="ph-date-chip' + (i === state.date ? " on" : "") + '" data-act="date" data-i="' + i + '">' + esc(d.wd) + "<b>" + d.day + "</b>" + esc(d.mon) + "</button>";
+        }).join("") + "</div>" +
+        '<div class="ph-cap-h mt">Время, слоты 8:00–10:00</div>' +
+        '<div class="ph-slots">' + slots.map(function (x, i) {
+          return '<button type="button" class="ph-slot' + (i === state.slot ? " on" : "") + '" data-act="slot" data-i="' + i + '">' + esc(x) + "</button>";
+        }).join("") + "</div>" +
+        '<div class="ph-cap-h mt"></div>' + prepCard() +
         '<div class="ph-bottom"><button type="button" class="ph-btn" data-act="send">Записаться</button></div>' +
         "</div>"
       );
     }
+    function statusbarless() { return ""; }
 
     function screenCabinet() {
       var st = statuses[state.status] || {};
       var key = st.key || "pending";
-      var methods = bk.methods || ["В Encore", "Медсестра на дом"];
-      var slot = (bk.slots || [])[state.slot] || "";
-      var rows = '<div class="ph-rows">' +
-        '<div class="ph-row"><span>Дата</span><span>' + esc(DATES[state.date]) + "</span></div>" +
-        '<div class="ph-row"><span>Время</span><span>' + esc(slot) + "</span></div>" +
-        '<div class="ph-row"><span>Способ</span><span>' + esc(methods[state.method]) + "</span></div></div>";
-      var body = "";
+      var slot = slots[state.slot] || "";
+      var when = "Дата: " + esc(DATES[state.date].full) + "<br>Время: " + esc(slot) + "<br>Адрес: выезд медсестры на дом";
+      var flag, title, desc, body = "";
       if (key === "pending") {
-        body = rows + '<div class="ph-sub">Команда подтвердит запись и напишет вам.</div>';
+        flag = '<span class="ph-st-flag red">' + ICON.clock + t(st.name) + "</span>";
+        title = "Запись на сдачу крови";
+        desc = "Заявка на выезд медсестры ожидает подтверждения менеджера";
+        body = '<div class="ph-kv">' + when + "</div>" + '<div class="ph-links"><button type="button" class="ph-link">Отменить запись</button></div>';
       } else if (key === "confirmed") {
-        body = rows + '<div class="ph-block"><b>Как подготовиться</b><ul>' + (bk.prep || []).map(function (x) { return "<li>" + t(x) + "</li>"; }).join("") + "</ul>" +
-          (bk.memo ? '<a class="ph-ext" href="../assets/' + esc(bk.memo) + '" target="_blank" rel="noopener">' + ICON.ext + "Открыть памятку</a>" : "") + "</div>";
+        flag = '<span class="ph-st-flag green">' + ICON.check + t(st.name) + "</span>";
+        title = "Запись на сдачу крови";
+        desc = "Выезд медсестры подтвержден";
+        body = '<div class="ph-kv">' + when + "</div>";
       } else if (key === "processing") {
-        body = '<div class="ph-rows"><div class="ph-row"><span>Кровь взята</span><span>' + esc(DATES[state.date]) + "</span></div>" +
-          '<div class="ph-row"><span>Ожидаемый срок</span><span>' + t(flow.expectedTerm, "срок") + "</span></div></div>";
+        flag = '<span class="ph-st-flag orange">' + ICON.clock + t(st.name) + "</span>";
+        title = "Результаты МетабоСкан";
+        desc = "Кровь взята " + esc(DATES[state.date].full) + ", образец передан в лабораторию";
+        body = '<div class="ph-kv">Срок результатов: ' + t(flow.expectedTerm, "срок") + "</div>";
       } else if (key === "ready") {
-        body = '<div class="ph-rows"><div class="ph-doc">' + ICON.doc + "Результаты анализов<em>PDF</em></div>" +
-          (flow.reports || []).map(function (r) { return '<div class="ph-doc">' + ICON.doc + t(r) + "<em>PDF</em></div>"; }).join("") + "</div>" +
-          '<button type="button" class="ph-btn ph-btn--ghost">Посмотреть результаты</button>';
-      } else if (key === "retake") {
-        body = '<div class="ph-sub">' + t(st.nameTodo) + "</div>" +
-          '<div class="ph-rows"><div class="ph-row"><span>Причина</span><span>' + t("[ЗАПОЛНИТЬ: причина]") + "</span></div></div>" +
-          '<button type="button" class="ph-btn" data-act="retake">Записаться повторно</button>';
+        flag = '<span class="ph-st-flag green">' + ICON.check + t(st.name) + "</span>";
+        title = "Результаты МетабоСкан";
+        desc = "Результаты и отчеты из лаборатории Сеченовского университета";
+        body = '<div class="ph-docs">' + ["Результаты анализов"].concat(flow.reports || []).map(function (r) {
+          return '<div class="ph-drow"><span class="ph-doc-thumb">PDF</span><span class="m">' + t(r) + '</span><button type="button" class="ph-pilllink">Скачать</button></div>';
+        }).join("") + "</div>" +
+          '<div class="ph-links"><button type="button" class="ph-link">Смотреть результаты в кабинете</button></div>';
+      } else {
+        flag = '<span class="ph-st-flag red">' + ICON.alert + t(st.name) + "</span>";
+        title = "Требуется пересдача";
+        desc = t(st.nameTodo, "название статуса");
+        body = '<div class="ph-kv">Причина: ' + t("[ЗАПОЛНИТЬ: причина пересдачи]") + "<br>Повторный забор для вас бесплатный.</div>" +
+          '<button type="button" class="ph-btn mt" data-act="retake">Записаться повторно</button>';
       }
       return (
+        tophead() +
         '<div class="ph-body">' +
-        '<div class="ph-h1">Мой заказ</div>' +
-        '<div class="ph-card"><div class="ph-card-top"><b>' + esc(productName()) + '</b><span class="ph-badge ph-badge--' + esc(key) + '">' + t(st.name, "статус") + "</span></div>" +
-        body +
-        "</div></div>"
+        '<div class="ph-lk-hi">Добро пожаловать, <span>Никита</span></div>' +
+        '<div class="ph-lk-chip">' + esc(productName()) + " ▾</div>" +
+        '<div class="ph-lk-card">' + flag + '<div class="h">' + title + '</div><div class="d">' + desc + "</div>" + body + "</div>" +
+        (key === "confirmed" ? prepCard() : "") +
+        "</div>"
       );
     }
 
@@ -209,12 +237,13 @@
             return '<button type="button" class="flow-status-pill' + (i === state.status ? " is-active" : "") + '" data-act="status" data-i="' + i + '" aria-pressed="' + (i === state.status) + '">' + t(st.name) + "</button>";
           }).join("") + "</div>"
         : "";
+      var screenClass = state.step === 1 ? " s-auth" : "";
       root.innerHTML =
         '<div class="flow-layout">' +
         '<div class="flow-phone-col">' +
         '<div class="flow-steps" aria-label="Шаги">' + pills + "</div>" +
         statusPills +
-        '<div class="phone"><div class="screen-clip"><div class="notch"></div><div class="ph-screen">' + statusbar() + SCREENS[state.step]() + "</div></div></div>" +
+        '<div class="phone"><div class="screen-clip"><div class="notch"></div><div class="ph-screen' + screenClass + '">' + statusbar() + SCREENS[state.step]() + "</div></div></div>" +
         "</div>" +
         '<div class="flow-desc">' +
         '<button type="button" class="flow-desc-toggle" data-act="desc" aria-expanded="' + state.descOpen + '"><span class="acc-title">Описание шага</span>' + ICON.chev + "</button>" +
@@ -242,7 +271,6 @@
           state.qPage = 0; go(state.step + 1); break;
         case "qnext": state.qPage += 1; render(); break;
         case "qback": state.qPage = Math.max(0, state.qPage - 1); render(); break;
-        case "method": state.method = i; render(); break;
         case "date": state.date = i; render(); break;
         case "slot": state.slot = i; render(); break;
         case "send": state.sent = true; render(); break;

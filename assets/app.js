@@ -95,7 +95,7 @@
     { id: "prep", label: "Подготовка" },
     { id: "flow", label: "Флоу" },
     { id: "guarantees", label: "Гарантии" },
-    { id: "economics", label: "Юнит-экономика" },
+    { id: "nextsteps", label: "Следующие шаги" },
     { id: "contacts", label: "Контакты" },
     { id: "questions", label: "Вопросы" }
   ];
@@ -207,76 +207,28 @@
       '<div id="flow-proto"></div>' +
       "</div></section>";
 
-    // guarantees
+    // guarantees: short list
     html +=
       '<section class="section" id="guarantees"><div class="container"><div class="section-head"><h2>Гарантии клиенту</h2></div>' +
-      '<ul class="acc">' +
-      (l.guarantees || []).map(function (g, i) {
-        return accItem({
-          id: "g-" + i,
-          title: t(g.situation, "ситуация"),
-          body: kv([
-            { label: "Что происходит", value: tOrDash(g.what) },
-            { label: "Кто платит", value: tOrDash(g.who) }
-          ])
-        });
+      '<ul class="guar-list">' +
+      (l.guarantees || []).map(function (g) {
+        return "<li><b>" + t(g.title, "гарантия") + ".</b> " + t(g.text, "описание") + "</li>";
       }).join("") +
-      "</ul></div></section>";
-
-    // unit economics
-    var eco = l.economics || {};
-    var cols = eco.columns || [];
-    var price = eco.price || { label: "Цена для клиента", values: [] };
-    var costs = eco.costs || [];
-    function num(v) { return typeof v === "number" && isFinite(v) ? v : null; }
-    function money(v) { return num(v) === null ? t(v, "сумма") : num(v).toLocaleString("ru-RU") + " ₽"; }
-    var margins = cols.map(function (_, c) {
-      var pr = num(price.values[c]);
-      if (pr === null) return null;
-      var sum = 0;
-      for (var i = 0; i < costs.length; i++) {
-        var x = num(costs[i].values[c]);
-        if (x === null) return null;
-        sum += x;
-      }
-      return { rub: pr - sum, pct: pr ? Math.round(((pr - sum) / pr) * 1000) / 10 : null };
-    });
-    var noData = '<span class="muted">нет данных</span>';
-    var ecoRows = [{ label: price.label, values: price.values }].concat(costs).map(function (r) {
-      return { label: t(r.label), cells: cols.map(function (_, c) { return money(r.values[c]); }) };
-    });
-    ecoRows.push({ label: "<strong>Маржа Bioniq, ₽</strong>", cells: margins.map(function (m) { return m ? "<strong>" + m.rub.toLocaleString("ru-RU") + " ₽</strong>" : noData; }), total: true });
-    ecoRows.push({ label: "<strong>Маржа Bioniq, %</strong>", cells: margins.map(function (m) { return m && m.pct !== null ? "<strong>" + String(m.pct).replace(".", ",") + " %</strong>" : noData; }), total: true });
-
-    html +=
-      '<section class="section" id="economics"><div class="container"><div class="section-head"><h2>Юнит-экономика</h2></div>' +
-      '<p class="muted eco-source">' + t(eco.source, "источник") + "</p>" +
-      // desktop: table
-      '<div class="table-wrap eco-table"><table class="table"><thead><tr><th>На одну единицу</th>' +
-      cols.map(function (c) { return "<th>" + t(c) + "</th>"; }).join("") +
-      "</tr></thead><tbody>" +
-      ecoRows.map(function (r) {
-        return '<tr class="' + (r.total ? "row-total" : "") + '"><td>' + r.label + "</td>" + r.cells.map(function (c) { return "<td>" + c + "</td>"; }).join("") + "</tr>";
-      }).join("") +
-      "</tbody></table></div>" +
-      // mobile: tabs by product
-      '<div class="eco-tabs">' +
-      '<div class="tabs" role="tablist" aria-label="Продукт">' +
-      cols.map(function (c, i) {
-        return '<button class="tab" type="button" role="tab" id="eco-tab-' + i + '" aria-selected="' + (i === 0) + '" aria-controls="eco-panel-' + i + '" tabindex="' + (i === 0 ? 0 : -1) + '">' + t(c) + "</button>";
-      }).join("") +
-      "</div>" +
-      cols.map(function (c, i) {
-        return (
-          '<div class="tabpanel eco-list" role="tabpanel" id="eco-panel-' + i + '" aria-labelledby="eco-tab-' + i + '"' + (i === 0 ? "" : " hidden") + ">" +
-          ecoRows.map(function (r) {
-            return '<div class="kv-line' + (r.total ? " kv-line--total" : "") + '"><span class="k">' + r.label + '</span><span class="v">' + r.cells[i] + "</span></div>";
-          }).join("") +
-          "</div>"
-        );
-      }).join("") +
-      "</div>" +
+      "</ul>" +
+      (l.guaranteesInternalNote ? '<div class="internal-note"><span class="internal-note-tag">Служебное</span>' + t(l.guaranteesInternalNote) + "</div>" : "") +
       "</div></section>";
+
+    // next steps
+    var STEP_STATUS = { todo: "Не начато", doing: "В работе", done: "Готово" };
+    html +=
+      '<section class="section" id="nextsteps"><div class="container"><div class="section-head"><h2>Следующие шаги</h2></div>' +
+      '<div class="table-wrap"><table class="table"><thead><tr><th>Задача</th><th>Ответственный</th><th>Статус</th></tr></thead><tbody>' +
+      (l.nextSteps || []).map(function (n) {
+        var label = STEP_STATUS[n.status];
+        return '<tr><td data-label="Задача">' + t(n.task, "задача") + '</td><td data-label="Ответственный">' + t(n.owner, "ответственный") + '</td><td data-label="Статус">' +
+          (label ? '<span class="chip chip--' + esc(n.status) + '">' + label + "</span>" : todo("статус")) + "</td></tr>";
+      }).join("") +
+      "</tbody></table></div></div></section>";
 
     // contacts
     html +=
@@ -324,7 +276,8 @@
         { label: "Метод", value: t(det.method, "метод") },
         { label: "Кровь", value: t(det.blood, "состав по крови") },
         { label: "Моча", value: t(det.urine, "состав по моче") },
-        { label: "Что дает", value: bullets(det.gives, "что дает") },
+        { label: "Что получает клиент", value: bullets(det.clientGets, "что получает клиент") },
+        { label: "Что получает специалист клуба (тренер, нутрициолог, врач)", value: bullets(det.specialistGets, "что получает специалист") },
         { label: "Чего не делает", value: bullets(det.notGives, "чего не делает") }
       ], true) +
       "</div></div></dialog>";
@@ -344,9 +297,10 @@
         '<button class="modal-close" type="button" aria-label="Закрыть">' + ICON.close + "</button></div>" +
         '<div class="modal-body">' +
         kv([
+          { label: "Биоматериал", value: t(c.biomaterial, "биоматериал") },
           { label: "Что входит", value: t(c.includes, "что входит") },
-          { label: "Какие отчеты получает клиент", value: t(c.reports, "отчеты") },
-          { label: "Цена", value: t(c.price, "цена") },
+          { label: "Отчеты для клиента", value: t(c.reports, "отчеты") },
+          { label: "Цена для клиента", value: t(c.price, "цена") },
           { label: "Срок результатов", value: t(c.term, "срок") }
         ], true) +
         "</div></div></dialog>"
