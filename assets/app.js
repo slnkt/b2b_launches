@@ -157,7 +157,32 @@
       }).join("") +
       "</div>" +
       (l.productsFootnote ? '<p class="footnote">' + t(l.productsFootnote) + "</p>" : "") +
+      examplesHtml(l.examples) +
       "</div></section>";
+
+    function pdfLinks(items) {
+      return '<div class="pdf-links">' + (items || []).map(function (x) {
+        if (!x.file) return t(x.todo || "[ЗАПОЛНИТЬ: нет примера]");
+        return '<a class="btn btn--secondary btn--sm" href="../assets/' + esc(x.file) + '" target="_blank" rel="noopener">' + ICON.open + t(x.label) + "</a>";
+      }).join("") + "</div>";
+    }
+    function examplesHtml(ex) {
+      if (!ex) return "";
+      var q = ex.questionnaire || {};
+      return (
+        '<div class="examples"><div class="examples-head"><h3>Примеры отчетов и анкеты</h3>' +
+        (ex.note ? '<span class="chip">' + t(ex.note) + "</span>" : "") + "</div>" +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Продукт</th><th>Для клиента</th><th>Для Encore</th></tr></thead><tbody>' +
+        (ex.rows || []).map(function (r) {
+          return '<tr><td data-label="Продукт">' + t(r.product) + '</td><td data-label="Для клиента">' + pdfLinks(r.client) + '</td><td data-label="Для Encore">' + pdfLinks(r.encore) + "</td></tr>";
+        }).join("") +
+        "</tbody></table></div>" +
+        '<div class="examples-q">' +
+        (q.file ? '<a class="btn btn--primary" href="../assets/' + esc(q.file) + '" target="_blank" rel="noopener">' + ICON.open + t(q.label, "бланк анкеты") + "</a>" : t(q.todo || "[ЗАПОЛНИТЬ: бланк анкеты]")) +
+        (q.caption ? '<span class="muted">' + t(q.caption) + "</span>" : "") +
+        "</div></div>"
+      );
+    }
 
     // roles
     html +=

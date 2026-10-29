@@ -77,6 +77,39 @@ window.LAUNCHES_DATA = {
       ],
       productsFootnote: "Закупочная цена базовая, при объеме до 80 образцов каждого вида в месяц.",
 
+      // Примеры отчетов и анкеты. file — имя PDF в /assets/, null — примера нет (показывается плашка).
+      examples: {
+        note: "Пример на тестовых данных",
+        rows: [
+          {
+            product: "Кровь",
+            client: [{ label: "Пациентский", file: "metaboscan_example_krov_patient.pdf" }],
+            encore: [
+              { label: "Врачебный", file: "metaboscan_example_krov_doctor.pdf" },
+              { label: "Тренерский", file: "metaboscan_example_krov_trainer.pdf" }
+            ]
+          },
+          {
+            product: "Кровь + моча",
+            client: [{ label: "Пациентский", file: "metaboscan_example_krov_mocha_patient.pdf" }],
+            encore: [
+              { label: "Тренерский", file: "metaboscan_example_krov_mocha_trainer.pdf" },
+              { label: "Врачебный", file: null, todo: "[ЗАПОЛНИТЬ: нет примера]" }
+            ]
+          },
+          {
+            product: "Моча",
+            client: [{ label: "Пациентский", file: null, todo: "[ЗАПОЛНИТЬ: нет примера]" }],
+            encore: [{ label: "Отчеты для Encore", file: null, todo: "[ЗАПОЛНИТЬ: нет примера]" }]
+          }
+        ],
+        questionnaire: {
+          label: "Бланк анкеты (PDF)",
+          file: "metaboscan_anketa_sport.pdf",
+          caption: "Версия МетабоСкан-СПОРТ, финальный состав уточняется"
+        }
+      },
+
       // Подготовка к сдаче. memo — имя PDF-файла в /assets/, только латиницей.
       preparation: [
         {
@@ -121,7 +154,8 @@ window.LAUNCHES_DATA = {
             title: "Анкета",
             client: "Заполняет анкету блоками. Поля по бланку Сеченовки, финальный состав: [ЗАПОЛНИТЬ].",
             ours: "Анкета уходит в Сеченовку вместе с биоматериалом. Без нее отчет выходит с пометкой о неполноте.",
-            owner: "Bioniq (форма), Сеченовский институт (состав полей)"
+            owner: "Bioniq (форма), Сеченовский институт (состав полей)",
+            links: [{ label: "Бланк анкеты Сеченовки (PDF)", file: "metaboscan_anketa_sport.pdf" }]
           },
           {
             title: "Запись на сдачу",

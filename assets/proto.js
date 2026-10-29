@@ -223,11 +223,16 @@
           "</tbody></table></div>" +
           kv([{ label: "Что происходит у нас", value: t(s.ours) }, { label: "Кто отвечает", value: t(s.owner) }], true);
       }
+      var links = (s.links || []).map(function (x) {
+        return x.file
+          ? '<a class="btn btn--secondary btn--sm" href="../assets/' + esc(x.file) + '" target="_blank" rel="noopener">' + t(x.label) + "</a>"
+          : t(x.todo || "[ЗАПОЛНИТЬ: файл]");
+      }).join("");
       return head + kv([
         { label: "Что делает клиент", value: t(s.client, "что делает клиент") },
         { label: "Что происходит у нас", value: t(s.ours, "что происходит у нас") },
         { label: "Кто отвечает", value: t(s.owner, "кто отвечает") }
-      ], true);
+      ], true) + (links ? '<div class="pdf-links">' + links + "</div>" : "");
     }
 
     /* ---------- render ---------- */
