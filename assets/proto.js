@@ -60,10 +60,12 @@
 
     /* ---------- screens ---------- */
     function screenCheckout() {
-      var ready = state.promoApplied && state.consents[0] && state.consents[1];
+      var consentList = co.consents || [];
+      var ready = state.promoApplied && consentList.every(function (c, i) { return c.required === false || state.consents[i]; });
       var priceHtml = t(co.price, "цена");
-      var consents = (co.consents || []).map(function (c, i) {
-        return '<label class="ph-check"><input type="checkbox" data-act="consent" data-i="' + i + '"' + (state.consents[i] ? " checked" : "") + '><span class="ph-cb"></span><span>' + t(c.label) + "<br>" + t(c.text, "текст согласия") + "</span></label>";
+      var consents = consentList.map(function (c, i) {
+        return '<label class="ph-check"><input type="checkbox" data-act="consent" data-i="' + i + '"' + (state.consents[i] ? " checked" : "") + '><span class="ph-cb"></span><span>' + t(c.label) +
+          ' <em class="ph-req">' + (c.required === false ? "необязательно" : "обязательно") + "</em><br>" + t(c.text, "текст согласия") + "</span></label>";
       }).join("");
       return (
         tophead() +
@@ -82,7 +84,7 @@
         '<div class="ph-order-total"><span class="l">Итого</span><span class="v">' + (state.promoApplied ? "0 ₽" : priceHtml) + "</span></div>" +
         '<div class="ph-consents">' + consents + "</div>" +
         '<div class="ph-bottom"><button type="button" class="ph-btn' + (ready ? "" : " dis") + '" data-act="next"' + (ready ? "" : ' aria-disabled="true"') + ">Продолжить</button>" +
-        '<div class="ph-hint">' + (ready ? "" : "Активируйте промокод и отметьте согласия") + "</div></div>" +
+        '<div class="ph-hint">' + (ready ? "" : "Активируйте промокод и отметьте обязательное согласие") + "</div></div>" +
         "</div>"
       );
     }
@@ -182,15 +184,16 @@
       } else if (key === "ready") {
         flag = '<span class="ph-st-flag green">' + ICON.check + t(st.name) + "</span>";
         title = "Результаты МетабоСкан";
-        desc = "Результаты и отчеты из лаборатории Сеченовского университета";
-        body = '<div class="ph-docs">' + ["Результаты анализов"].concat(flow.reports || []).map(function (r) {
-          return '<div class="ph-drow"><span class="ph-doc-thumb">PDF</span><span class="m">' + t(r) + '</span><button type="button" class="ph-pilllink">Скачать</button></div>';
-        }).join("") + "</div>" +
-          '<div class="ph-links"><button type="button" class="ph-link">Смотреть результаты в кабинете</button></div>';
+        desc = "Результаты из лаборатории Сеченовского университета и ваш отчет";
+        body = '<div class="ph-docs">' +
+          '<div class="ph-drow"><span class="ph-doc-thumb">PDF</span><span class="m">' + t(flow.clientReport, "отчет клиента") + '</span><button type="button" class="ph-pilllink">Скачать</button></div>' +
+          "</div>" +
+          '<div class="ph-kv">Оцифрованные результаты: 162 показателя со шкалами в кабинете</div>' +
+          '<div class="ph-links"><button type="button" class="ph-link">Смотреть результаты</button></div>';
       } else {
         flag = '<span class="ph-st-flag red">' + ICON.alert + t(st.name) + "</span>";
         title = "Требуется пересдача";
-        desc = t(st.nameTodo, "название статуса");
+        desc = "Проблема с биоматериалом, нужен повторный забор";
         body = '<div class="ph-kv">Причина: ' + t("[ЗАПОЛНИТЬ: причина пересдачи]") + "<br>Повторный забор для вас бесплатный.</div>" +
           '<button type="button" class="ph-btn mt" data-act="retake">Записаться повторно</button>';
       }
@@ -215,7 +218,7 @@
         return head +
           '<div class="table-wrap"><table class="table table--compact"><thead><tr><th>Статус</th><th>Когда ставится</th><th>Кто меняет</th><th>Что видит клиент</th></tr></thead><tbody>' +
           statuses.map(function (st) {
-            return '<tr><td data-label="Статус">' + t(st.name) + (st.nameTodo ? "<br>" + t(st.nameTodo) : "") + '</td><td data-label="Когда ставится">' + t(st.when) + '</td><td data-label="Кто меняет">' + t(st.who) + '</td><td data-label="Что видит клиент">' + t(st.sees) + "</td></tr>";
+            return '<tr><td data-label="Статус">' + t(st.name) + '</td><td data-label="Когда ставится">' + t(st.when) + '</td><td data-label="Кто меняет">' + t(st.who) + '</td><td data-label="Что видит клиент">' + t(st.sees) + "</td></tr>";
           }).join("") +
           "</tbody></table></div>" +
           kv([{ label: "Что происходит у нас", value: t(s.ours) }, { label: "Кто отвечает", value: t(s.owner) }], true);

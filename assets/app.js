@@ -89,15 +89,12 @@
 
   /* ---------- launch page ---------- */
   var SECTIONS = [
-    { id: "about", label: "О продукте" },
+    { id: "product", label: "Продукт" },
     { id: "roles", label: "Роли" },
-    { id: "products", label: "Продукты" },
-    { id: "prep", label: "Подготовка" },
     { id: "flow", label: "Флоу" },
     { id: "guarantees", label: "Гарантии" },
     { id: "nextsteps", label: "Следующие шаги" },
-    { id: "contacts", label: "Контакты" },
-    { id: "questions", label: "Вопросы" }
+    { id: "contacts", label: "Контакты" }
   ];
 
   function findLaunch() {
@@ -138,17 +135,28 @@
       '<div class="hero-meta">' + badge(l.status) + "<span>Обновлено " + fmtDate(l.updated) + "</span></div>" +
       "</div></section>";
 
-    // about
+    // product: what it is, three variants, preparation inside the modals
     var about = l.about || {};
+    var products = l.products || [];
+    var prepById = {};
+    (l.preparation || []).forEach(function (pr) { prepById[pr.id] = pr; });
+    function money(v) { return typeof v === "number" && isFinite(v) ? v.toLocaleString("ru-RU") + " ₽" : t(v, "цена"); }
     html +=
-      '<section class="section" id="about"><div class="container"><div class="section-head"><h2>О продукте</h2></div>' +
-      '<p class="lead">' + t(about.short, "коротко о продукте") + "</p>" +
-      '<div class="grid grid-3 variants">' +
-      (about.variants || []).map(function (v) {
-        return '<div class="variant"><h3>' + t(v.name, "вариант") + "</h3><p>" + t(v.text, "описание") + "</p></div>";
+      '<section class="section" id="product"><div class="container"><div class="section-head"><h2>Продукт</h2></div>' +
+      '<p class="lead">' + t(about.short, "что это") + "</p>" +
+      '<div class="lead-actions"><button class="btn btn--secondary" type="button" data-modal="about-modal">Подробнее</button></div>' +
+      '<div class="grid grid-3">' +
+      products.map(function (p, i) {
+        return (
+          '<article class="card"><h3>' + t(p.name, "название") + "</h3>" +
+          '<div><div class="kv-line"><span class="k">Срок результатов</span><span class="v">' + t(p.term, "срок") + "</span></div>" +
+          '<div class="kv-line"><span class="k">Закупочная цена</span><span class="v">' + money(p.purchasePrice) + "</span></div></div>" +
+          '<div class="card-actions"><button class="btn btn--secondary" type="button" data-modal="product-' + i + '">Состав и подготовка</button></div>' +
+          "</article>"
+        );
       }).join("") +
       "</div>" +
-      '<button class="btn btn--secondary" type="button" data-modal="about-modal">Подробнее</button>' +
+      (l.productsFootnote ? '<p class="footnote">' + t(l.productsFootnote) + "</p>" : "") +
       "</div></section>";
 
     // roles
@@ -159,47 +167,6 @@
         return '<article class="card"><h3>' + t(r.party, "участник") + "</h3><p>" + t(r.role, "роль") + "</p></article>";
       }).join("") +
       "</div></div></section>";
-
-    // products
-    var products = l.products || [];
-    html +=
-      '<section class="section" id="products"><div class="container"><div class="section-head"><h2>Продукты</h2></div>' +
-      '<div class="grid grid-3">' +
-      products.map(function (p, i) {
-        return (
-          '<article class="card"><h3>' + t(p.name, "название") + "</h3>" +
-          '<div><div class="kv-line"><span class="k">Цена</span><span class="v">' + t(p.price, "цена") + "</span></div>" +
-          '<div class="kv-line"><span class="k">Срок результатов</span><span class="v">' + t(p.term, "срок") + "</span></div></div>" +
-          '<div class="card-actions"><button class="btn btn--secondary" type="button" data-modal="product-' + i + '">Состав</button></div>' +
-          "</article>"
-        );
-      }).join("") +
-      "</div></div></section>";
-
-    // preparation
-    var prep = l.preparation || [];
-    html +=
-      '<section class="section" id="prep"><div class="container"><div class="section-head"><h2>Подготовка к сдаче</h2></div>' +
-      '<div class="tabs" role="tablist" aria-label="Тип биоматериала">' +
-      prep.map(function (p, i) {
-        return '<button class="tab" type="button" role="tab" id="tab-' + esc(p.id) + '" aria-selected="' + (i === 0) + '" aria-controls="panel-' + esc(p.id) + '" tabindex="' + (i === 0 ? 0 : -1) + '">' + t(p.label) + "</button>";
-      }).join("") +
-      "</div>" +
-      prep.map(function (p, i) {
-        var memo = p.memo
-          ? '<div class="btn-row">' +
-            '<a class="btn btn--primary" href="../assets/' + esc(p.memo) + '" target="_blank" rel="noopener">' + ICON.open + "Открыть памятку</a>" +
-            '<button class="btn btn--secondary desktop-only" type="button" data-memo="../assets/' + esc(p.memo) + '" data-memo-title="Памятка: ' + esc(p.label) + '">Показать здесь</button>' +
-            "</div>"
-          : '<div>' + t(p.memoTodo, "памятка PDF") + "</div>";
-        return (
-          '<div class="tabpanel" role="tabpanel" id="panel-' + esc(p.id) + '" aria-labelledby="tab-' + esc(p.id) + '"' + (i === 0 ? "" : " hidden") + ">" +
-          '<ul class="check-list">' + (p.items || []).map(function (it) { return "<li><span>" + t(it) + "</span></li>"; }).join("") + "</ul>" +
-          memo +
-          "</div>"
-        );
-      }).join("") +
-      "</div></section>";
 
     // flow: clickable prototype (assets/proto.js)
     html +=
@@ -239,28 +206,6 @@
       }).join("") +
       "</tbody></table></div></div></section>";
 
-    // questions
-    var qs = l.questions || [];
-    html +=
-      '<section class="section" id="questions"><div class="container"><div class="section-head"><h2>Открытые вопросы</h2>' +
-      '<label class="switch"><input type="checkbox" id="show-resolved"> Показать решенные</label></div>' +
-      '<ul class="acc" id="questions-list">' +
-      qs.map(function (q, i) {
-        var resolved = q.status === "resolved";
-        return accItem({
-          id: "q-" + i,
-          title: t(q.question, "вопрос"),
-          tags: '<span class="chip' + (resolved ? " chip--resolved" : "") + '">' + (resolved ? "Решен" : "Открыт") + "</span>",
-          body: kv([
-            { label: "У кого", value: t(q.owner, "у кого") },
-            { label: resolved ? "Решение" : "Контекст", value: t(q.note, resolved ? "решение" : "контекст") }
-          ])
-        }).replace('<li class="acc-item">', '<li class="acc-item" data-status="' + (resolved ? "resolved" : "open") + '"' + (resolved ? " hidden" : "") + ">");
-      }).join("") +
-      "</ul>" +
-      '<div class="q-empty" id="q-empty" hidden>Открытых вопросов нет.</div>' +
-      "</div></section>";
-
     // modals
     var det = about.details || {};
     function bullets(arr, hint) {
@@ -269,7 +214,7 @@
     }
     html +=
       '<dialog class="modal" id="about-modal" aria-labelledby="about-modal-title">' +
-      '<div class="modal-inner"><div class="modal-head"><h3 id="about-modal-title">О продукте</h3>' +
+      '<div class="modal-inner"><div class="modal-head"><h3 id="about-modal-title">МетабоСкан</h3>' +
       '<button class="modal-close" type="button" aria-label="Закрыть">' + ICON.close + "</button></div>" +
       '<div class="modal-body">' +
       kv([
@@ -277,32 +222,35 @@
         { label: "Кровь", value: t(det.blood, "состав по крови") },
         { label: "Моча", value: t(det.urine, "состав по моче") },
         { label: "Что получает клиент", value: bullets(det.clientGets, "что получает клиент") },
-        { label: "Что получает специалист клуба (тренер, нутрициолог, врач)", value: bullets(det.specialistGets, "что получает специалист") },
         { label: "Чего не делает", value: bullets(det.notGives, "чего не делает") }
       ], true) +
       "</div></div></dialog>";
 
-    html +=
-      '<dialog class="modal modal--wide" id="memo-modal" aria-labelledby="memo-modal-title">' +
-      '<div class="modal-inner"><div class="modal-head"><h3 id="memo-modal-title">Памятка</h3>' +
-      '<button class="modal-close" type="button" aria-label="Закрыть">' + ICON.close + "</button></div>" +
-      '<div class="modal-body modal-body--frame"><iframe class="memo-frame" title="Памятка" src="about:blank"></iframe></div>' +
-      "</div></dialog>";
-
     html += products.map(function (p, i) {
-      var c = p.composition || {};
+      var prepHtml = (p.prep || []).map(function (id) {
+        var pr = prepById[id];
+        if (!pr) return t("[ЗАПОЛНИТЬ: подготовка " + id + "]");
+        return (
+          '<div class="prep-block"><div class="kv-label">' + t(pr.label) + "</div>" +
+          '<ul class="check-list">' + (pr.items || []).map(function (it) { return "<li><span>" + t(it) + "</span></li>"; }).join("") + "</ul>" +
+          (pr.memo
+            ? '<a class="btn btn--primary" href="../assets/' + esc(pr.memo) + '" target="_blank" rel="noopener">' + ICON.open + "Открыть памятку</a>"
+            : t(pr.memoTodo, "памятка PDF")) +
+          "</div>"
+        );
+      }).join("");
       return (
         '<dialog class="modal" id="product-' + i + '" aria-labelledby="product-' + i + '-title">' +
         '<div class="modal-inner"><div class="modal-head"><h3 id="product-' + i + '-title">' + t(p.name) + "</h3>" +
         '<button class="modal-close" type="button" aria-label="Закрыть">' + ICON.close + "</button></div>" +
         '<div class="modal-body">' +
         kv([
-          { label: "Биоматериал", value: t(c.biomaterial, "биоматериал") },
-          { label: "Что входит", value: t(c.includes, "что входит") },
-          { label: "Отчеты для клиента", value: t(c.reports, "отчеты") },
-          { label: "Цена для клиента", value: t(c.price, "цена") },
-          { label: "Срок результатов", value: t(c.term, "срок") }
+          { label: "Срок результатов", value: t(p.term, "срок") },
+          { label: "Закупочная цена (Сеченовский университет)", value: money(p.purchasePrice) },
+          { label: "Биоматериал", value: t(p.biomaterial, "биоматериал") },
+          { label: "Что входит", value: t(p.includes, "что входит") }
         ], true) +
+        '<div class="prep-wrap">' + prepHtml + "</div>" +
         "</div></div></dialog>"
       );
     }).join("");
@@ -310,8 +258,6 @@
     root.innerHTML = html;
     if (window.renderFlowProto) window.renderFlowProto(document.getElementById("flow-proto"), l.flow || {}, { t: t, esc: esc, kv: kv });
     initSubnav();
-    initTabs();
-    initQuestions();
     initModals();
     // Sections appear after load, so the browser could not scroll to the hash itself.
     if (location.hash) {
@@ -371,52 +317,6 @@
     onScroll();
   }
 
-  function initTabs() {
-    Array.prototype.forEach.call(document.querySelectorAll('[role="tablist"]'), initTablist);
-  }
-  function initTablist(list) {
-    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
-    function select(tab) {
-      tabs.forEach(function (x) {
-        var on = x === tab;
-        x.setAttribute("aria-selected", String(on));
-        x.tabIndex = on ? 0 : -1;
-        var panel = document.getElementById(x.getAttribute("aria-controls"));
-        if (panel) panel.hidden = !on;
-      });
-      tab.focus();
-    }
-    tabs.forEach(function (tab, i) {
-      tab.addEventListener("click", function () { select(tab); });
-      tab.addEventListener("keydown", function (e) {
-        var j = null;
-        if (e.key === "ArrowRight") j = (i + 1) % tabs.length;
-        if (e.key === "ArrowLeft") j = (i - 1 + tabs.length) % tabs.length;
-        if (e.key === "Home") j = 0;
-        if (e.key === "End") j = tabs.length - 1;
-        if (j !== null) { e.preventDefault(); select(tabs[j]); }
-      });
-    });
-  }
-
-  function initQuestions() {
-    var toggle = document.getElementById("show-resolved");
-    var list = document.getElementById("questions-list");
-    var empty = document.getElementById("q-empty");
-    if (!toggle || !list) return;
-    function apply() {
-      var visible = 0;
-      Array.prototype.forEach.call(list.children, function (li) {
-        var hide = li.getAttribute("data-status") === "resolved" && !toggle.checked;
-        li.hidden = hide;
-        if (!hide) visible++;
-      });
-      if (empty) empty.hidden = visible > 0;
-    }
-    toggle.addEventListener("change", apply);
-    apply();
-  }
-
   function initModals() {
     var lastTrigger = null;
     document.addEventListener("click", function (e) {
@@ -431,18 +331,6 @@
         }
         return;
       }
-      var memoBtn = e.target.closest("[data-memo]");
-      if (memoBtn) {
-        var memo = document.getElementById("memo-modal");
-        if (memo && typeof memo.showModal === "function") {
-          lastTrigger = memoBtn;
-          memo.querySelector("#memo-modal-title").textContent = memoBtn.getAttribute("data-memo-title") || "Памятка";
-          memo.querySelector(".memo-frame").src = memoBtn.getAttribute("data-memo");
-          memo.showModal();
-          memo.querySelector(".modal-close").focus();
-        }
-        return;
-      }
       var closeBtn = e.target.closest(".modal-close");
       if (closeBtn) { closeBtn.closest("dialog").close(); return; }
       // click on the backdrop: the target is the dialog itself, not its content
@@ -450,8 +338,6 @@
     });
     document.addEventListener("close", function (e) {
       if (e.target.tagName !== "DIALOG") return;
-      var frame = e.target.querySelector(".memo-frame");
-      if (frame) frame.src = "about:blank";
       if (lastTrigger) { lastTrigger.focus(); lastTrigger = null; }
     }, true);
   }
